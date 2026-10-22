@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pick Activity — Train a Neural Network</title>
+<style>
+  :root {
+    --bg: #f6f7f9; --card: #ffffff; --ink: #1c1e21; --muted: #6b7280;
+    --line: #e5e7eb; --accent: #2563eb; --ok: #16a34a; --warn: #d97706;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: system-ui, -apple-system, "Segoe UI", sans-serif; background: var(--bg); color: var(--ink); }
+  .wrap { max-width: 900px; margin: 0 auto; padding: 24px 16px 48px; }
+  h1 { font-size: 1.5rem; margin: 0 0 4px; }
+  .sub { color: var(--muted); margin: 0 0 20px; }
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  @media (max-width: 700px) { .grid { grid-template-columns: 1fr; } }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 18px; }
+  .card h2 { font-size: 1rem; margin: 0 0 12px; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
+  label { display: flex; justify-content: space-between; font-weight: 600; margin-bottom: 4px; }
+  input[type=range] { width: 100%; margin: 0 0 18px; }
+  .bar-row { display: grid; grid-template-columns: 120px 1fr 56px; align-items: center; gap: 10px; margin: 8px 0; }
+  .bar { height: 22px; background: var(--line); border-radius: 6px; overflow: hidden; }
+  .bar > div { height: 100%; background: var(--accent); width: 0%; transition: width .12s; }
+  .bar-row.win .bar > div { background: var(--ok); }
+  .bar-row.win .name { font-weight: 700; }
+  .pct { text-align: right; font-variant-numeric: tabular-nums; }
+  .rules { margin-top: 14px; padding: 10px 12px; background: var(--bg); border-radius: 8px; font-size: .95rem; }
+  .status { font-size: 1.05rem; margin: 6px 0 14px; min-height: 1.4em; }
+  .status.untrained { color: var(--warn); font-weight: 600; }
+  .status.done { color: var(--ok); font-weight: 600; }
+  .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 14px; }
+  .stat { background: var(--bg); border-radius: 8px; padding: 10px; }
+  .stat .k { font-size: .75rem; color: var(--muted); text-transform: uppercase; }
+  .stat .v { font-size: 1.3rem; font-variant-numeric: tabular-nums; }
+  button { font: inherit; padding: 10px 18px; border-radius: 8px; border: 1px solid var(--line); background: var(--card); cursor: pointer; margin-right: 8px; }
+  button.primary { background: var(--accent); color: #fff; border-color: var(--accent); }
+  button:disabled { opacity: .5; cursor: default; }
+  progress { width: 100%; height: 10px; margin-top: 12px; }
+  details { margin-top: 16px; }
+  summary { cursor: pointer; color: var(--muted); }
+  .mat { display: grid; gap: 3px; margin: 8px 0 14px; font-family: ui-monospace, Menlo, monospace; font-size: .72rem; }
+  .mat span { background: var(--bg); padding: 3px 4px; border-radius: 4px; text-align: right; font-variant-numeric: tabular-nums; }
+  .mat-label { font-size: .8rem; color: var(--muted); margin-top: 10px; }
+  code { background: var(--bg); padding: 1px 5px; border-radius: 4px; }
+  .rulesTbl { width: 100%; border-collapse: collapse; font-size: .9rem; }
+  .rulesTbl th, .rulesTbl td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--line); }
+  .rulesTbl th { font-size: .75rem; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
+  .rulesTbl tr.active td { background: #dcfce7; font-weight: 600; }
+  .tblNote { font-size: .8rem; color: var(--muted); margin-top: 6px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Pick Activity: a neural network you can train</h1>
+  <p class="sub">2 inputs → 8 hidden neurons → 5 outputs. It starts with random weights, so the predictions are garbage. Press <b>Train</b> and watch it learn the rules from examples.</p>
+
+  <div class="grid">
+    <div class="card">
+      <h2>Inputs</h2>
+      <label>Temperature <span id="tempVal">72 °F</span></label>
+      <input type="range" id="temp" min="0" max="100" value="72">
+      <label>Chance of rain <span id="rainVal">20 %</span></label>
+      <input type="range" id="rain" min="0" max="100" value="20">
+
+      <h2>Network says</h2>
+      <div id="bars"></div>
+      <div class="rules">The if/else rules say: <b id="ruleAnswer"></b></div>
+
+      <h2 style="margin-top:18px">The rules (what the network has to discover)</h2>
+      <table class="rulesTbl">
+        <thead><tr><th>Temperature</th><th>Raining?</th><th>Activity</th></tr></thead>
+        <tbody>
+          <tr id="rule0"><td>≥ 80 °F</td><td>no</td><td>play volleyball</td></tr>
+          <tr id="rule1"><td>≥ 80 °F</td><td>yes</td><td>see a movie</td></tr>
+          <tr id="rule2"><td>32 – 79 °F</td><td>no</td><td>go running</td></tr>
+          <tr id="rule3"><td>32 – 79 °F</td><td>yes</td><td>try yoga</td></tr>
+          <tr id="rule4"><td>&lt; 32 °F</td><td>either</td><td>read a book</td></tr>
+        </tbody>
+      </table>
+      <div class="tblNote">"Raining" = chance of rain ≥ 50%</div>
+    </div>
+
+    <div class="card">
+      <h2>Training</h2>
+      <div id="status" class="status untrained">Untrained — weights are random</div>
+      <div class="stats">
+        <div class="stat"><div class="k">Epoch</div><div class="v" id="epoch">0</div></div>
+        <div class="stat"><div class="k">Loss</div><div class="v" id="loss">—</div></div>
+        <div class="stat"><div class="k">Accuracy</div><div class="v" id="acc">—</div></div>
+      </div>
+      <button class="primary" id="trainBtn">Train (3000 epochs)</button>
+      <button id="resetBtn">Reset weights</button>
+      <progress id="prog" value="0" max="3000"></progress>
+
+      <details>
+        <summary>Show the 56 weights (they change as it trains)</summary>
+        <div class="mat-label">W1 — inputs (rows: temp, rain) → 8 hidden neurons (columns)</div>
+        <div class="mat" id="w1" style="grid-template-columns: repeat(8, 1fr)"></div>
+        <div class="mat-label">W2 — 8 hidden neurons (rows) → 5 activities (columns)</div>
+        <div class="mat" id="w2" style="grid-template-columns: repeat(5, 1fr)"></div>
+      </details>
+    </div>
+  </div>
+
+  <p class="sub" style="margin-top:18px">
+    The network never sees the rules table. It only sees 2000 example days that were labeled by those rules.
+    Try sliding to exactly 80°, exactly 32°, or exactly 50% rain after training.
+  </p>
+</div>
+
+<script>
+// ---------------------------------------------------------------------------
+// PART 1: the deterministic program (the if/else)
+// ---------------------------------------------------------------------------
+const ACTIVITIES = ["play volleyball", "see a movie", "go running", "try yoga", "read a book"];
+
+function chooseActivityRules(temp, rainPct) {
+  const raining = rainPct >= 50;
+  if (temp >= 80) return raining ? 1 : 0;
+  if (temp >= 32) return raining ? 3 : 2;
+  return 4;
+}
+
+// ---------------------------------------------------------------------------
+// PART 2: synthetic training data — the network only sees (inputs, answer)
+// ---------------------------------------------------------------------------
+function normalize(temp, rainPct) { return [temp / 100, rainPct / 100]; }
+
+function makeDataset(n) {
+  const X = [], labels = [];
+  for (let i = 0; i < n; i++) {
+    const temp = Math.random() * 100, rain = Math.random() * 100;
+    X.push(normalize(temp, rain));
+    labels.push(chooseActivityRules(temp, rain));
+  }
+  return { X, labels };
+}
+
+// ---------------------------------------------------------------------------
+// PART 3: the network — same functions as the Python version
+// ---------------------------------------------------------------------------
+const N_IN = 2, N_HID = 8, N_OUT = 5;
+let params;
+
+function randn() { // normal(0,1) via Box–Muller
+  const u = 1 - Math.random(), v = Math.random();
+  return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v);
+}
+function matrix(rows, cols, fn) {
+  return Array.from({ length: rows }, () => Array.from({ length: cols }, fn));
+}
+function initializeWeights() {
+  return {
+    W1: matrix(N_IN, N_HID, () => randn() * 0.5), b1: new Array(N_HID).fill(0),
+    W2: matrix(N_HID, N_OUT, () => randn() * 0.5), b2: new Array(N_OUT).fill(0),
+  };
+}
+
+const relu = z => Math.max(0, z);
+
+function softmax(z) {
+  const m = Math.max(...z);
+  const e = z.map(v => Math.exp(v - m));
+  const s = e.reduce((a, b) => a + b, 0);
+  return e.map(v => v / s);
+}
+
+// forward pass for ONE example: (1×2) @ (2×8) → relu → (1×8) @ (8×5) → softmax → (1×5)
+function forward(p, x) {
+  const z1 = new Array(N_HID).fill(0), a1 = new Array(N_HID);
+  for (let j = 0; j < N_HID; j++) {
+    let s = p.b1[j];
+    for (let i = 0; i < N_IN; i++) s += x[i] * p.W1[i][j];
+    z1[j] = s; a1[j] = relu(s);
+  }
+  const z2 = new Array(N_OUT).fill(0);
+  for (let k = 0; k < N_OUT; k++) {
+    let s = p.b2[k];
+    for (let j = 0; j < N_HID; j++) s += a1[j] * p.W2[j][k];
+    z2[k] = s;
+  }
+  return { z1, a1, probs: softmax(z2) };
+}
+
+// one full epoch: forward every example, accumulate gradients, then update once
+function trainEpoch(p, data, lr) {
+  const n = data.X.length;
+  const dW1 = matrix(N_IN, N_HID, () => 0), db1 = new Array(N_HID).fill(0);
+  const dW2 = matrix(N_HID, N_OUT, () => 0), db2 = new Array(N_OUT).fill(0);
+  let loss = 0, correct = 0;
+
+  for (let e = 0; e < n; e++) {
+    const x = data.X[e], y = data.labels[e];
+    const { z1, a1, probs } = forward(p, x);
+
+    loss += -Math.log(probs[y] + 1e-12);                       // cross-entropy
+    if (probs.indexOf(Math.max(...probs)) === y) correct++;
+
+    // --- backward pass (chain rule, layer by layer in reverse) ---
+    const dz2 = probs.map((pr, k) => (pr - (k === y ? 1 : 0)) / n);   // "predicted minus correct"
+    for (let j = 0; j < N_HID; j++) for (let k = 0; k < N_OUT; k++) dW2[j][k] += a1[j] * dz2[k];
+    for (let k = 0; k < N_OUT; k++) db2[k] += dz2[k];
+
+    const dz1 = new Array(N_HID);
+    for (let j = 0; j < N_HID; j++) {
+      let da = 0;
+      for (let k = 0; k < N_OUT; k++) da += dz2[k] * p.W2[j][k];   // push error back through W2
+      dz1[j] = z1[j] > 0 ? da : 0;                                  // through relu
+    }
+    for (let i = 0; i < N_IN; i++) for (let j = 0; j < N_HID; j++) dW1[i][j] += x[i] * dz1[j];
+    for (let j = 0; j < N_HID; j++) db1[j] += dz1[j];
+  }
+
+  // --- update weights: nudge every weight against its gradient ---
+  for (let i = 0; i < N_IN; i++) for (let j = 0; j < N_HID; j++) p.W1[i][j] -= lr * dW1[i][j];
+  for (let j = 0; j < N_HID; j++) p.b1[j] -= lr * db1[j];
+  for (let j = 0; j < N_HID; j++) for (let k = 0; k < N_OUT; k++) p.W2[j][k] -= lr * dW2[j][k];
+  for (let k = 0; k < N_OUT; k++) p.b2[k] -= lr * db2[k];
+
+  return { loss: loss / n, acc: correct / n };
+}
+
+// ---------------------------------------------------------------------------
+// PART 4: the page
+// ---------------------------------------------------------------------------
+const EPOCHS = 3000, LR = 0.5, EPOCHS_PER_FRAME = 25;
+const $ = id => document.getElementById(id);
+let data, training = false, trained = false;
+
+const barsEl = $("bars");
+ACTIVITIES.forEach((name, k) => {
+  barsEl.insertAdjacentHTML("beforeend",
+    `<div class="bar-row" id="row${k}"><span class="name">${name}</span><div class="bar"><div id="fill${k}"></div></div><span class="pct" id="pct${k}">—</span></div>`);
+});
+
+function predict() {
+  const temp = +$("temp").value, rain = +$("rain").value;
+  $("tempVal").textContent = `${temp} °F`;
+  $("rainVal").textContent = `${rain} %`;
+  const { probs } = forward(params, normalize(temp, rain));
+  const best = probs.indexOf(Math.max(...probs));
+  probs.forEach((pr, k) => {
+    $(`fill${k}`).style.width = (pr * 100).toFixed(1) + "%";
+    $(`pct${k}`).textContent = (pr * 100).toFixed(0) + "%";
+    $(`row${k}`).classList.toggle("win", k === best);
+  });
+  const rule = chooseActivityRules(temp, rain);
+  $("ruleAnswer").textContent = ACTIVITIES[rule];
+  for (let k = 0; k < N_OUT; k++) $(`rule${k}`).classList.toggle("active", k === rule);
+}
+
+function showWeights() {
+  const fmt = v => v.toFixed(2);
+  $("w1").innerHTML = params.W1.flat().map(v => `<span>${fmt(v)}</span>`).join("");
+  $("w2").innerHTML = params.W2.flat().map(v => `<span>${fmt(v)}</span>`).join("");
+}
+
+function reset() {
+  params = initializeWeights();
+  data = makeDataset(2000);
+  trained = false;
+  $("epoch").textContent = "0"; $("loss").textContent = "—"; $("acc").textContent = "—";
+  $("prog").value = 0;
+  const s = $("status"); s.className = "status untrained"; s.textContent = "Untrained — weights are random";
+  $("trainBtn").disabled = false;
+  predict(); showWeights();
+}
+
+function train() {
+  if (training) return;
+  training = true; $("trainBtn").disabled = true;
+  const s = $("status"); s.className = "status"; s.textContent = "Training…";
+  let epoch = 0;
+
+  function step() {
+    let stats;
+    for (let i = 0; i < EPOCHS_PER_FRAME && epoch < EPOCHS; i++) { stats = trainEpoch(params, data, LR); epoch++; }
+    $("epoch").textContent = epoch;
+    $("loss").textContent = stats.loss.toFixed(4);
+    $("acc").textContent = (stats.acc * 100).toFixed(1) + "%";
+    $("prog").value = epoch;
+    predict(); showWeights();            // sliders update live while it learns
+
+    if (epoch < EPOCHS) requestAnimationFrame(step);
+    else {
+      // test on 500 fresh examples the network has never seen
+      const test = makeDataset(500);
+      let ok = 0;
+      test.X.forEach((x, i) => { const pr = forward(params, x).probs; if (pr.indexOf(Math.max(...pr)) === test.labels[i]) ok++; });
+      s.className = "status done";
+      s.textContent = `Trained — ${(ok / 5).toFixed(1)}% correct on 500 unseen examples`;
+      training = false; trained = true;
+    }
+  }
+  requestAnimationFrame(step);
+}
+
+$("temp").addEventListener("input", predict);
+$("rain").addEventListener("input", predict);
+$("trainBtn").addEventListener("click", train);
+$("resetBtn").addEventListener("click", () => { if (!training) reset(); });
+reset();
+</script>
+</body>
+</html>
