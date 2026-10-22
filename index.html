@@ -49,6 +49,10 @@
   .rulesTbl th { font-size: .75rem; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
   .rulesTbl tr.active td { background: #dcfce7; font-weight: 600; }
   .tblNote { font-size: .8rem; color: var(--muted); margin-top: 6px; }
+  .dataWrap { max-height: 320px; overflow-y: auto; border: 1px solid var(--line); border-radius: 8px; margin-top: 8px; }
+  .dataWrap .rulesTbl th { position: sticky; top: 0; background: var(--card); box-shadow: 0 1px 0 var(--line); }
+  .dataWrap .rulesTbl td { font-variant-numeric: tabular-nums; }
+  .dataWrap .rulesTbl td.idx { color: var(--muted); font-size: .8rem; }
   /* QR code for presentations (lower left) */
   #qrBtn { position: fixed; left: 16px; bottom: 16px; z-index: 20; margin: 0; font-size: .85rem; padding: 8px 14px; box-shadow: 0 2px 8px rgba(0,0,0,.08); }
   #qrPanel { position: fixed; left: 16px; bottom: 64px; z-index: 20; display: none; flex-direction: column; align-items: center; gap: 8px; padding: 16px 20px; background: var(--card); border: 1px solid var(--line); border-radius: 12px; box-shadow: 0 8px 24px rgba(0,0,0,.14); }
@@ -108,6 +112,17 @@
         <div class="mat" id="w1" style="grid-template-columns: repeat(8, 1fr)"></div>
         <div class="mat-label">W2 — 8 hidden neurons (rows) → 5 activities (columns)</div>
         <div class="mat" id="w2" style="grid-template-columns: repeat(5, 1fr)"></div>
+      </details>
+
+      <details>
+        <summary>Show the training data (2000 example days)</summary>
+        <div class="mat-label">Each row is one example: the inputs and the answer the if/else rules gave. The network sees temp ÷ 100 and rain ÷ 100.</div>
+        <div class="dataWrap">
+          <table class="rulesTbl">
+            <thead><tr><th>#</th><th>Temp</th><th>Rain</th><th>Activity</th></tr></thead>
+            <tbody id="dataRows"></tbody>
+          </table>
+        </div>
       </details>
     </div>
   </div>
@@ -272,9 +287,17 @@ function showWeights() {
   $("w2").innerHTML = params.W2.flat().map(v => `<span>${fmt(v)}</span>`).join("");
 }
 
+function showData() {
+  $("dataRows").innerHTML = data.X.map((x, i) => {
+    const temp = x[0] * 100, rain = x[1] * 100;
+    return `<tr><td class="idx">${i + 1}</td><td>${temp.toFixed(1)} °F</td><td>${rain.toFixed(0)} %</td><td>${ACTIVITIES[data.labels[i]]}</td></tr>`;
+  }).join("");
+}
+
 function reset() {
   params = initializeWeights();
   data = makeDataset(2000);
+  showData();
   trained = false;
   $("epoch").textContent = "0"; $("loss").textContent = "—"; $("acc").textContent = "—";
   $("prog").value = 0;
