@@ -82,16 +82,15 @@
 
       <h2 style="margin-top:18px">The rules (what the network has to discover)</h2>
       <table class="rulesTbl">
-        <thead><tr><th>Temperature</th><th>Raining?</th><th>Activity</th></tr></thead>
+        <thead><tr><th>Temperature</th><th>Rain %</th><th>Activity</th></tr></thead>
         <tbody>
-          <tr id="rule0"><td>≥ 80 °F</td><td>no</td><td>play volleyball</td></tr>
-          <tr id="rule1"><td>≥ 80 °F</td><td>yes</td><td>see a movie</td></tr>
-          <tr id="rule2"><td>32 – 79 °F</td><td>no</td><td>go running</td></tr>
-          <tr id="rule3"><td>32 – 79 °F</td><td>yes</td><td>try yoga</td></tr>
-          <tr id="rule4"><td>&lt; 32 °F</td><td>either</td><td>read a book</td></tr>
+          <tr id="rule0"><td>≥ 80 °F</td><td>&lt; 50%</td><td>play volleyball</td></tr>
+          <tr id="rule1"><td>≥ 80 °F</td><td>≥ 50%</td><td>see a movie</td></tr>
+          <tr id="rule2"><td>32 – 79 °F</td><td>&lt; 50%</td><td>go running</td></tr>
+          <tr id="rule3"><td>32 – 79 °F</td><td>≥ 50%</td><td>try yoga</td></tr>
+          <tr id="rule4"><td>&lt; 32 °F</td><td>any</td><td>read a book</td></tr>
         </tbody>
       </table>
-      <div class="tblNote">"Raining" = chance of rain ≥ 50%</div>
     </div>
 
     <div class="card">
