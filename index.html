@@ -53,6 +53,15 @@
   .dataWrap .rulesTbl th { position: sticky; top: 0; background: var(--card); box-shadow: 0 1px 0 var(--line); }
   .dataWrap .rulesTbl td { font-variant-numeric: tabular-nums; }
   .dataWrap .rulesTbl td.idx { color: var(--muted); font-size: .8rem; }
+  /* network diagram pop-up */
+  dialog { border: 1px solid var(--line); border-radius: 12px; padding: 20px 22px; box-shadow: 0 12px 32px rgba(0,0,0,.18); color: var(--ink); }
+  dialog::backdrop { background: rgba(0,0,0,.35); }
+  dialog h3 { margin: 0 0 10px; font-size: 1.05rem; }
+  #netDialog { max-width: 820px; width: calc(100vw - 32px); }
+  #netDialog svg { width: 100%; height: auto; display: block; background: var(--bg); border-radius: 8px; }
+  #netDialog .netNote { font-size: .85rem; color: var(--muted); margin: 10px 0 0; line-height: 1.45; }
+  #netDialog .netNote b.sw { display: inline-block; width: 22px; height: 3px; vertical-align: middle; margin: 0 4px 0 2px; }
+  #netDialog .btns { text-align: right; margin-top: 12px; }
   /* QR code for presentations (lower left) */
   #qrBtn { position: fixed; left: 16px; bottom: 16px; z-index: 20; margin: 0; font-size: .85rem; padding: 8px 14px; box-shadow: 0 2px 8px rgba(0,0,0,.08); }
   #qrPanel { position: fixed; left: 16px; bottom: 64px; z-index: 20; display: none; flex-direction: column; align-items: center; gap: 8px; padding: 16px 20px; background: var(--card); border: 1px solid var(--line); border-radius: 12px; box-shadow: 0 8px 24px rgba(0,0,0,.14); }
@@ -79,6 +88,7 @@
       <h2>Network says</h2>
       <div id="bars"></div>
       <div class="rules">The if/else rules say: <b id="ruleAnswer"></b></div>
+      <div style="margin-top:12px"><button id="netBtn" title="Open a live picture of the network: the slider values going in, the five probabilities coming out, and all 56 weights in between. It updates as you move the sliders and as it trains.">Show the network</button></div>
 
       <h2 style="margin-top:18px">The rules (what the network has to discover)</h2>
       <table class="rulesTbl">
@@ -131,6 +141,13 @@
     Try sliding to exactly 80°, exactly 32°, or exactly 50% rain after training.
   </p>
 </div>
+
+<dialog id="netDialog">
+  <h3 id="netTitle">Inside the network, right now</h3>
+  <div id="netSvgWrap"></div>
+  <p class="netNote" id="netNote"></p>
+  <div class="btns"><button id="netClose" class="primary">Close</button></div>
+</dialog>
 
 <button id="qrBtn" type="button" aria-expanded="false" aria-controls="qrPanel">Show QR code</button>
 <div id="qrPanel" role="dialog" aria-label="QR code for this page">
@@ -277,6 +294,7 @@ function predict() {
   });
   const rule = chooseActivityRules(temp, rain);
   $("ruleAnswer").textContent = ACTIVITIES[rule];
+  if ($("netDialog").open) drawNetwork();
   for (let k = 0; k < N_OUT; k++) $(`rule${k}`).classList.toggle("active", k === rule);
 }
 
@@ -339,6 +357,61 @@ $("rain").addEventListener("input", predict);
 $("trainBtn").addEventListener("click", train);
 $("resetBtn").addEventListener("click", () => { if (!training) reset(); });
 reset();
+
+// ---------------------------------------------------------------------------
+// Live picture of the network: 2 inputs -> 8 hidden -> 5 outputs, all 56 weights
+// ---------------------------------------------------------------------------
+function drawNetwork() {
+  const temp = +$("temp").value, rain = +$("rain").value;
+  const x = normalize(temp, rain), f = forward(params, x);
+  const W = 820, H = 440, xIn = 170, xHid = 410, xOut = 620;
+  const yIn = i => 150 + i * 120, yHid = j => 40 + j * 46, yOut = k => 70 + k * 70;
+  let maxW1 = 0, maxW2 = 0, maxA = 1e-9;
+  params.W1.flat().forEach(w => { maxW1 = Math.max(maxW1, Math.abs(w)); });
+  params.W2.flat().forEach(w => { maxW2 = Math.max(maxW2, Math.abs(w)); });
+  f.a1.forEach(a => { maxA = Math.max(maxA, a); });
+  const edge = (x1, y1, x2, y2, w, maxW) => {
+    const m = Math.abs(w) / (maxW || 1);
+    return `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${w >= 0 ? "#2563eb" : "#dc2626"}" stroke-opacity="${(0.12 + 0.7 * m).toFixed(2)}" stroke-width="${(0.6 + 3 * m).toFixed(2)}"/>`;
+  };
+  let s = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" font-family="system-ui, sans-serif" font-size="13">`;
+  for (let i = 0; i < N_IN; i++) for (let j = 0; j < N_HID; j++) s += edge(xIn + 18, yIn(i), xHid - 12, yHid(j), params.W1[i][j], maxW1);
+  for (let j = 0; j < N_HID; j++) for (let k = 0; k < N_OUT; k++) s += edge(xHid + 12, yHid(j), xOut - 18, yOut(k), params.W2[j][k], maxW2);
+  // inputs: the scaled slider values
+  const inLabel = [`temperature ${temp} °F`, `rain ${rain} %`];
+  for (let i = 0; i < N_IN; i++) {
+    s += `<circle cx="${xIn}" cy="${yIn(i)}" r="18" fill="#2563eb"/>`;
+    s += `<text x="${xIn}" y="${yIn(i) + 5}" text-anchor="middle" fill="#fff" font-weight="700">${x[i].toFixed(2)}</text>`;
+    s += `<text x="${xIn - 26}" y="${yIn(i) + 5}" text-anchor="end" fill="#6b7280">${inLabel[i]} →</text>`;
+  }
+  // hidden: fill = how strongly the neuron fired (relu output)
+  for (let j = 0; j < N_HID; j++) {
+    const a = f.a1[j] / maxA;
+    s += `<circle cx="${xHid}" cy="${yHid(j)}" r="12" fill="#16a34a" fill-opacity="${(0.08 + 0.92 * a).toFixed(2)}" stroke="#16a34a" stroke-width="1.5"/>`;
+    s += `<text x="${xHid + 18}" y="${yHid(j) + 4}" fill="#6b7280" font-size="11">h${j + 1}  ${f.a1[j].toFixed(2)}</text>`;
+  }
+  // outputs: probability per activity
+  const best = f.probs.indexOf(Math.max(...f.probs));
+  for (let k = 0; k < N_OUT; k++) {
+    s += `<circle cx="${xOut}" cy="${yOut(k)}" r="18" fill="${k === best ? "#16a34a" : "#fff"}" stroke="#16a34a" stroke-width="2"/>`;
+    s += `<text x="${xOut}" y="${yOut(k) + 5}" text-anchor="middle" fill="${k === best ? "#fff" : "#1c1e21"}" font-weight="700" font-size="12">${Math.round(f.probs[k] * 100)}%</text>`;
+    s += `<text x="${xOut + 26}" y="${yOut(k) + 5}" fill="#1c1e21" font-weight="${k === best ? 700 : 400}">${ACTIVITIES[k]}</text>`;
+  }
+  s += `<text x="${xIn}" y="${H - 16}" text-anchor="middle" fill="#1c1e21" font-weight="600">2 inputs</text>`;
+  s += `<text x="${xHid}" y="${H - 16}" text-anchor="middle" fill="#1c1e21" font-weight="600">8 hidden neurons</text>`;
+  s += `<text x="${xOut + 40}" y="${H - 16}" text-anchor="middle" fill="#1c1e21" font-weight="600">5 outputs</text>`;
+  s += `<text x="${(xIn + xHid) / 2}" y="${H - 34}" text-anchor="middle" fill="#6b7280" font-size="11">× W1 + b1, then relu (16 weights)</text>`;
+  s += `<text x="${(xHid + xOut) / 2}" y="${H - 34}" text-anchor="middle" fill="#6b7280" font-size="11">× W2 + b2, then softmax (40 weights)</text>`;
+  s += `</svg>`;
+  $("netSvgWrap").innerHTML = s;
+  $("netTitle").textContent = `Inside the network, right now (${trained ? "trained" : training ? "training…" : "untrained"})`;
+  $("netNote").innerHTML = `<b>Inputs</b> are the sliders scaled to 0–1 (temperature ÷ 100, rain ÷ 100). <b>Lines</b> are the 56 weights: ` +
+    `<b class="sw" style="background:#2563eb"></b>positive, <b class="sw" style="background:#dc2626"></b>negative, thicker = bigger. ` +
+    `<b>Hidden circles</b> fill in by how strongly each neuron fired (its relu output is printed beside it). <b>Outputs</b> are the five probabilities; the winner is green. ` +
+    `Move the sliders, or press Train with this open, and the picture updates.`;
+}
+$("netBtn").addEventListener("click", () => { drawNetwork(); $("netDialog").showModal(); });
+$("netClose").addEventListener("click", () => $("netDialog").close());
 
 // QR code toggle so students can find this page during a presentation
 const qrBtn = $("qrBtn"), qrPanel = $("qrPanel");
