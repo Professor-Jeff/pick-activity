@@ -70,10 +70,16 @@
   #qrPanel svg { width: 220px; height: 220px; border: 8px solid #fff; background: #fff; display: block; }
   #qrPanel .qrUrl { font-size: .85rem; color: var(--muted); letter-spacing: .03em; }
   @media (max-width: 700px) { #qrPanel svg { width: 160px; height: 160px; } }
+  /* previous / next links through the demo series */
+  .series { display: flex; justify-content: space-between; align-items: center; gap: 12px; font-size: .9rem; color: var(--muted); margin: 0 0 14px; }
+  .series a { color: var(--accent); text-decoration: none; font-weight: 600; white-space: nowrap; }
+  .series a:hover, .series a:focus-visible { text-decoration: underline; }
+  .series.bottom { margin: 28px 0 0; padding-top: 14px; border-top: 1px solid var(--line); }
 </style>
 </head>
 <body>
 <div class="wrap">
+  <nav class="series" aria-label="Neural network demo series"><span></span><span>Part 1 of 3 · neural network demos</span><a href="https://professor-jeff.github.io/tictactoe-nn/" title="Next demo in the series">Next: Tic-Tac-Toe →</a></nav>
   <h1>Pick Activity: a neural network you can train</h1>
   <p class="sub">2 inputs → 8 hidden neurons → 5 outputs. It starts with random weights, so the predictions are garbage. Press <b>Train</b> and watch it learn the rules from examples.</p>
 
@@ -140,6 +146,7 @@
     The network never sees the rules table. It only sees 2000 example days that were labeled by those rules.
     Try sliding to exactly 80°, exactly 32°, or exactly 50% rain after training.
   </p>
+  <nav class="series bottom" aria-label="Neural network demo series"><span></span><span>Part 1 of 3 · neural network demos</span><a href="https://professor-jeff.github.io/tictactoe-nn/" title="Next demo in the series">Next: Tic-Tac-Toe →</a></nav>
 </div>
 
 <dialog id="netDialog">
