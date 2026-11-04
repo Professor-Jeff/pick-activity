@@ -138,8 +138,8 @@
         <div class="stat"><div class="k">Loss</div><div class="v" id="loss">—</div></div>
         <div class="stat"><div class="k">Accuracy</div><div class="v" id="acc">—</div></div>
       </div>
-      <button class="primary" id="trainBtn">Train (3000 epochs)</button>
-      <button id="resetBtn">Reset weights</button>
+      <button class="primary" id="trainBtn" title="One epoch = one pass through all 2,000 examples in the table below. On each pass the network compares its guesses with the if/else answers, adds up how wrong it was (the Loss), and nudges all 56 weights a little in the direction that makes the loss smaller. That nudge is gradient descent. 3,000 passes is enough for the rules to emerge. Watch Loss fall and Accuracy rise.">Train (3000 epochs)</button>
+      <button id="resetBtn" title="Throws away everything the network learned. All 56 weights are set to small random numbers (bell-curve draws centered on zero) and the biases to zero, so it goes back to guessing. They are random rather than all zero so the 8 hidden neurons start out different from each other and can learn different things; identical neurons would stay identical. A fresh set of 2,000 examples is drawn too.">Reset weights</button>
       <progress id="prog" value="0" max="3000"></progress>
 
       <details>
@@ -175,7 +175,7 @@
     <h3 id="netTitle">Inside the network, right now</h3>
     <div><label>Temperature <span id="nTempVal">72 °F</span></label><input type="range" id="nTemp" min="0" max="100" value="72"></div>
     <div><label>Chance of rain <span id="nRainVal">20 %</span></label><input type="range" id="nRain" min="0" max="100" value="20"></div>
-    <div class="netBtns"><button class="primary" id="nTrainBtn" title="Train the network while watching the picture">Train</button><button class="x" id="nResetBtn" title="Reset weights (same as the main page)" aria-label="Reset weights">×</button></div>
+    <div class="netBtns"><button class="primary" id="nTrainBtn" title="One epoch = one pass through all 2,000 examples in the table below. On each pass the network compares its guesses with the if/else answers, adds up how wrong it was (the Loss), and nudges all 56 weights a little in the direction that makes the loss smaller. That nudge is gradient descent. 3,000 passes is enough for the rules to emerge. Watch Loss fall and Accuracy rise.">Train</button><button class="x" id="nResetBtn" title="Throws away everything the network learned. All 56 weights are set to small random numbers (bell-curve draws centered on zero) and the biases to zero, so it goes back to guessing. They are random rather than all zero so the 8 hidden neurons start out different from each other and can learn different things; identical neurons would stay identical. A fresh set of 2,000 examples is drawn too." aria-label="Reset weights">×</button></div>
   </div>
   <div id="netSvgWrap"></div>
   <p class="netNote" id="netNote"></p>
