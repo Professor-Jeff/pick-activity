@@ -62,6 +62,12 @@
   #netDialog .netNote { font-size: .85rem; color: var(--muted); margin: 10px 0 0; line-height: 1.45; }
   #netDialog .netNote b.sw { display: inline-block; width: 22px; height: 3px; vertical-align: middle; margin: 0 4px 0 2px; }
   #netDialog .btns { text-align: right; margin-top: 12px; }
+  #netDialog .netCtl { position: sticky; top: -20px; z-index: 2; background: var(--card); padding: 20px 0 10px; margin: -20px 0 10px; border-bottom: 1px solid var(--line); display: grid; grid-template-columns: 1fr 1fr auto; gap: 0 16px; align-items: end; }
+  #netDialog .netCtl h3 { grid-column: 1 / -1; margin: 0 0 8px; }
+  #netDialog .netCtl label { font-size: .85rem; margin-bottom: 2px; }
+  #netDialog .netCtl input[type=range] { margin: 0; }
+  #netDialog .netCtl button { margin: 0; padding: 8px 14px; white-space: nowrap; }
+  @media (max-width: 560px) { #netDialog .netCtl { grid-template-columns: 1fr 1fr; } #netDialog .netCtl button { grid-column: 1 / -1; justify-self: start; margin-top: 8px; } }
   #netDialog .term { font: inherit; font-weight: 600; color: var(--accent); background: none; border: 0; padding: 0; margin: 0; cursor: pointer; text-decoration: underline dotted; text-underline-offset: 3px; }
   #netDialog .term[aria-expanded="true"] { background: #dbeafe; border-radius: 4px; text-decoration: none; }
   #netDialog .netDef { font-size: .85rem; color: var(--ink); background: var(--bg); border-left: 3px solid var(--accent); border-radius: 6px; padding: 8px 12px; margin: 8px 0 0; line-height: 1.45; }
@@ -156,7 +162,12 @@
 </div>
 
 <dialog id="netDialog">
-  <h3 id="netTitle">Inside the network, right now</h3>
+  <div class="netCtl">
+    <h3 id="netTitle">Inside the network, right now</h3>
+    <div><label>Temperature <span id="nTempVal">72 °F</span></label><input type="range" id="nTemp" min="0" max="100" value="72"></div>
+    <div><label>Chance of rain <span id="nRainVal">20 %</span></label><input type="range" id="nRain" min="0" max="100" value="20"></div>
+    <button class="primary" id="nTrainBtn" title="Train the network while watching the picture">Train</button>
+  </div>
   <div id="netSvgWrap"></div>
   <p class="netNote" id="netNote"></p>
   <p class="netDef" id="netDef" hidden></p>
@@ -297,8 +308,9 @@ ACTIVITIES.forEach((name, k) => {
 
 function predict() {
   const temp = +$("temp").value, rain = +$("rain").value;
-  $("tempVal").textContent = `${temp} °F`;
-  $("rainVal").textContent = `${rain} %`;
+  $("tempVal").textContent = $("nTempVal").textContent = `${temp} °F`;
+  $("rainVal").textContent = $("nRainVal").textContent = `${rain} %`;
+  $("nTemp").value = temp; $("nRain").value = rain;
   const { probs } = forward(params, normalize(temp, rain));
   const best = probs.indexOf(Math.max(...probs));
   probs.forEach((pr, k) => {
@@ -333,13 +345,13 @@ function reset() {
   $("epoch").textContent = "0"; $("loss").textContent = "—"; $("acc").textContent = "—";
   $("prog").value = 0;
   const s = $("status"); s.className = "status untrained"; s.textContent = "Untrained — weights are random";
-  $("trainBtn").disabled = false;
+  $("trainBtn").disabled = $("nTrainBtn").disabled = false;
   predict(); showWeights();
 }
 
 function train() {
   if (training) return;
-  training = true; $("trainBtn").disabled = true;
+  training = true; $("trainBtn").disabled = $("nTrainBtn").disabled = true;
   const s = $("status"); s.className = "status"; s.textContent = "Training…";
   let epoch = 0;
 
@@ -369,6 +381,9 @@ function train() {
 $("temp").addEventListener("input", predict);
 $("rain").addEventListener("input", predict);
 $("trainBtn").addEventListener("click", train);
+$("nTrainBtn").addEventListener("click", train);
+$("nTemp").addEventListener("input", () => { $("temp").value = $("nTemp").value; predict(); });
+$("nRain").addEventListener("input", () => { $("rain").value = $("nRain").value; predict(); });
 $("resetBtn").addEventListener("click", () => { if (!training) reset(); });
 reset();
 
@@ -433,7 +448,7 @@ function drawNetwork() {
     `<b>Hidden circles</b> fill in by how strongly each neuron fired; the number inside is its output after ${term("relu", "ReLU")}. ` +
     `Hover or tap a hidden circle to see its 7 weights as numbers. ` +
     `<b>Outputs</b> are the five probabilities, made by ${term("softmax", "softmax")}; the winner is green. ` +
-    `Move the sliders, or press Train with this open, and the picture updates. Tap an underlined word for its definition.`;
+    `Move the sliders above, or press Train, and the picture updates. Tap an underlined word for its definition.`;
 }
 
 // plain-language definitions for the two bits of jargon in the picture; tap a term to show one
