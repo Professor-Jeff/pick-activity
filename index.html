@@ -62,6 +62,10 @@
   #netDialog .netNote { font-size: .85rem; color: var(--muted); margin: 10px 0 0; line-height: 1.45; }
   #netDialog .netNote b.sw { display: inline-block; width: 22px; height: 3px; vertical-align: middle; margin: 0 4px 0 2px; }
   #netDialog .btns { text-align: right; margin-top: 12px; }
+  #netDialog .term { font: inherit; font-weight: 600; color: var(--accent); background: none; border: 0; padding: 0; margin: 0; cursor: pointer; text-decoration: underline dotted; text-underline-offset: 3px; }
+  #netDialog .term[aria-expanded="true"] { background: #dbeafe; border-radius: 4px; text-decoration: none; }
+  #netDialog .netDef { font-size: .85rem; color: var(--ink); background: var(--bg); border-left: 3px solid var(--accent); border-radius: 6px; padding: 8px 12px; margin: 8px 0 0; line-height: 1.45; }
+  #netDialog .netDef[hidden] { display: none; }
   /* QR code for presentations (lower left) */
   #qrBtn { position: fixed; left: 16px; bottom: 16px; z-index: 20; margin: 0; font-size: .85rem; padding: 8px 14px; box-shadow: 0 2px 8px rgba(0,0,0,.08); }
   #qrPanel { position: fixed; left: 16px; bottom: 64px; z-index: 20; display: none; flex-direction: column; align-items: center; gap: 8px; padding: 16px 20px; background: var(--card); border: 1px solid var(--line); border-radius: 12px; box-shadow: 0 8px 24px rgba(0,0,0,.14); }
@@ -155,6 +159,7 @@
   <h3 id="netTitle">Inside the network, right now</h3>
   <div id="netSvgWrap"></div>
   <p class="netNote" id="netNote"></p>
+  <p class="netDef" id="netDef" hidden></p>
   <div class="btns"><button id="netClose" class="primary">Close</button></div>
 </dialog>
 
@@ -409,16 +414,32 @@ function drawNetwork() {
   s += `<text x="${xIn}" y="${H - 16}" text-anchor="middle" fill="#1c1e21" font-weight="600">2 inputs</text>`;
   s += `<text x="${xHid}" y="${H - 16}" text-anchor="middle" fill="#1c1e21" font-weight="600">8 hidden neurons</text>`;
   s += `<text x="${xOut + 40}" y="${H - 16}" text-anchor="middle" fill="#1c1e21" font-weight="600">5 outputs</text>`;
-  s += `<text x="${(xIn + xHid) / 2}" y="${H - 34}" text-anchor="middle" fill="#6b7280" font-size="11">× W1 + b1, then relu (16 weights)</text>`;
+  s += `<text x="${(xIn + xHid) / 2}" y="${H - 34}" text-anchor="middle" fill="#6b7280" font-size="11">× W1 + b1, then ReLU (16 weights)</text>`;
   s += `<text x="${(xHid + xOut) / 2}" y="${H - 34}" text-anchor="middle" fill="#6b7280" font-size="11">× W2 + b2, then softmax (40 weights)</text>`;
   s += `</svg>`;
   $("netSvgWrap").innerHTML = s;
   $("netTitle").textContent = `Inside the network, right now (${trained ? "trained" : training ? "training…" : "untrained"})`;
   $("netNote").innerHTML = `<b>Inputs</b> are the sliders scaled to 0–1 (temperature ÷ 100, rain ÷ 100). <b>Lines</b> are the 56 weights: ` +
     `<b class="sw" style="background:#2563eb"></b>positive, <b class="sw" style="background:#dc2626"></b>negative, thicker = bigger. ` +
-    `<b>Hidden circles</b> fill in by how strongly each neuron fired (its relu output is printed beside it). <b>Outputs</b> are the five probabilities; the winner is green. ` +
-    `Move the sliders, or press Train with this open, and the picture updates.`;
+    `<b>Hidden circles</b> fill in by how strongly each neuron fired; the number beside each one is its output after ${term("relu", "ReLU")}. ` +
+    `<b>Outputs</b> are the five probabilities, made by ${term("softmax", "softmax")}; the winner is green. ` +
+    `Move the sliders, or press Train with this open, and the picture updates. Tap an underlined word for its definition.`;
 }
+
+// plain-language definitions for the two bits of jargon in the picture; tap a term to show one
+const DEFS = {
+  relu: `<b>ReLU</b> (rectified linear unit) is the one rule each hidden neuron applies after adding up its weighted inputs: if the total is below 0, output 0; otherwise pass the total through unchanged. So a hidden neuron is "off" (0) for some slider settings and "on" for others, and that on/off behavior is what lets the network carve the temperature-and-rain space into regions.`,
+  softmax: `<b>Softmax</b> turns the five output scores into five probabilities that add up to 100%. A bigger score gets a bigger share, but every activity keeps at least a sliver, which is why no guess is ever exactly 0%.`
+};
+let openTerm = null;
+const term = (key, label) => `<button type="button" class="term" data-term="${key}" aria-expanded="${openTerm === key}">${label}</button>`;
+$("netNote").addEventListener("click", e => {
+  const t = e.target.closest(".term"); if (!t) return;
+  openTerm = openTerm === t.dataset.term ? null : t.dataset.term;
+  $("netDef").innerHTML = openTerm ? DEFS[openTerm] : "";
+  $("netDef").hidden = !openTerm;
+  $("netNote").querySelectorAll(".term").forEach(b => b.setAttribute("aria-expanded", b.dataset.term === openTerm));
+});
 $("netBtn").addEventListener("click", () => { drawNetwork(); $("netDialog").showModal(); });
 $("netClose").addEventListener("click", () => $("netDialog").close());
 
