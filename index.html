@@ -384,13 +384,21 @@ function drawNetwork() {
   params.W1.flat().forEach(w => { maxW1 = Math.max(maxW1, Math.abs(w)); });
   params.W2.flat().forEach(w => { maxW2 = Math.max(maxW2, Math.abs(w)); });
   f.a1.forEach(a => { maxA = Math.max(maxA, a); });
-  const edge = (x1, y1, x2, y2, w, maxW) => {
-    const m = Math.abs(w) / (maxW || 1);
-    return `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${w >= 0 ? "#2563eb" : "#dc2626"}" stroke-opacity="${(0.12 + 0.7 * m).toFixed(2)}" stroke-width="${(0.6 + 3 * m).toFixed(2)}"/>`;
+  const focus = pinnedHid ?? hoverHid;              // hidden neuron whose 7 weights are being inspected
+  let labels = "";
+  const edge = (x1, y1, x2, y2, w, maxW, j) => {
+    const m = Math.pow(Math.abs(w) / (maxW || 1), 1.6);   // steeper curve: strong weights stand out, weak ones recede
+    const color = w >= 0 ? "#2563eb" : "#dc2626";
+    let op = 0.08 + 0.8 * m, wd = 0.5 + 3.5 * m;
+    if (focus !== null) { if (j === focus) { op = 0.95; wd = Math.max(wd, 1.8); } else { op = 0.05; } }
+    if (focus === j) {                                     // print this weight at the midpoint of its line
+      labels += `<text x="${(x1 + x2) / 2}" y="${(y1 + y2) / 2 + 4}" text-anchor="middle" fill="${color}" font-weight="700" font-size="12" stroke="#fff" stroke-width="4" paint-order="stroke">${w >= 0 ? "+" : "−"}${Math.abs(w).toFixed(2)}</text>`;
+    }
+    return `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${color}" stroke-opacity="${op.toFixed(2)}" stroke-width="${wd.toFixed(2)}" pointer-events="none"/>`;
   };
-  let s = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" font-family="system-ui, sans-serif" font-size="13">`;
-  for (let i = 0; i < N_IN; i++) for (let j = 0; j < N_HID; j++) s += edge(xIn + 18, yIn(i), xHid - 12, yHid(j), params.W1[i][j], maxW1);
-  for (let j = 0; j < N_HID; j++) for (let k = 0; k < N_OUT; k++) s += edge(xHid + 12, yHid(j), xOut - 18, yOut(k), params.W2[j][k], maxW2);
+  let s = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" font-family="system-ui, sans-serif" font-size="14">`;
+  for (let i = 0; i < N_IN; i++) for (let j = 0; j < N_HID; j++) s += edge(xIn + 18, yIn(i), xHid - 18, yHid(j), params.W1[i][j], maxW1, j);
+  for (let j = 0; j < N_HID; j++) for (let k = 0; k < N_OUT; k++) s += edge(xHid + 18, yHid(j), xOut - 18, yOut(k), params.W2[j][k], maxW2, j);
   // inputs: the scaled slider values
   const inLabel = [`temperature ${temp} °F`, `rain ${rain} %`];
   for (let i = 0; i < N_IN; i++) {
@@ -398,18 +406,19 @@ function drawNetwork() {
     s += `<text x="${xIn}" y="${yIn(i) + 5}" text-anchor="middle" fill="#fff" font-weight="700">${x[i].toFixed(2)}</text>`;
     s += `<text x="${xIn - 26}" y="${yIn(i) + 5}" text-anchor="end" fill="#6b7280">${inLabel[i]} →</text>`;
   }
-  // hidden: fill = how strongly the neuron fired (relu output)
+  // hidden: fill = how strongly the neuron fired (relu output), with the value printed inside
   for (let j = 0; j < N_HID; j++) {
-    const a = f.a1[j] / maxA;
-    s += `<circle cx="${xHid}" cy="${yHid(j)}" r="12" fill="#16a34a" fill-opacity="${(0.08 + 0.92 * a).toFixed(2)}" stroke="#16a34a" stroke-width="1.5"/>`;
-    s += `<text x="${xHid + 18}" y="${yHid(j) + 4}" fill="#6b7280" font-size="11">h${j + 1}  ${f.a1[j].toFixed(2)}</text>`;
+    const a = f.a1[j] / maxA, hot = a > 0.45;
+    s += `<circle class="hid" data-h="${j}" cx="${xHid}" cy="${yHid(j)}" r="18" fill="#16a34a" fill-opacity="${(0.08 + 0.92 * a).toFixed(2)}" stroke="${focus === j ? "#1c1e21" : "#16a34a"}" stroke-width="${focus === j ? 3 : 2}" style="cursor:pointer"/>`;
+    s += `<text x="${xHid}" y="${yHid(j) + 5}" text-anchor="middle" fill="${hot ? "#fff" : "#14532d"}" font-weight="700" font-size="12" pointer-events="none">${f.a1[j].toFixed(2)}</text>`;
   }
+  s += labels;
   // outputs: probability per activity
   const best = f.probs.indexOf(Math.max(...f.probs));
   for (let k = 0; k < N_OUT; k++) {
     s += `<circle cx="${xOut}" cy="${yOut(k)}" r="18" fill="${k === best ? "#16a34a" : "#fff"}" stroke="#16a34a" stroke-width="2"/>`;
     s += `<text x="${xOut}" y="${yOut(k) + 5}" text-anchor="middle" fill="${k === best ? "#fff" : "#1c1e21"}" font-weight="700" font-size="12">${Math.round(f.probs[k] * 100)}%</text>`;
-    s += `<text x="${xOut + 26}" y="${yOut(k) + 5}" fill="#1c1e21" font-weight="${k === best ? 700 : 400}">${ACTIVITIES[k]}</text>`;
+    s += `<text x="${xOut + 26}" y="${yOut(k) + 5}" fill="#1c1e21" font-weight="${k === best ? 700 : 500}">${ACTIVITIES[k]}</text>`;
   }
   s += `<text x="${xIn}" y="${H - 16}" text-anchor="middle" fill="#1c1e21" font-weight="600">2 inputs</text>`;
   s += `<text x="${xHid}" y="${H - 16}" text-anchor="middle" fill="#1c1e21" font-weight="600">8 hidden neurons</text>`;
@@ -421,7 +430,8 @@ function drawNetwork() {
   $("netTitle").textContent = `Inside the network, right now (${trained ? "trained" : training ? "training…" : "untrained"})`;
   $("netNote").innerHTML = `<b>Inputs</b> are the sliders scaled to 0–1 (temperature ÷ 100, rain ÷ 100). <b>Lines</b> are the 56 weights: ` +
     `<b class="sw" style="background:#2563eb"></b>positive, <b class="sw" style="background:#dc2626"></b>negative, thicker = bigger. ` +
-    `<b>Hidden circles</b> fill in by how strongly each neuron fired; the number beside each one is its output after ${term("relu", "ReLU")}. ` +
+    `<b>Hidden circles</b> fill in by how strongly each neuron fired; the number inside is its output after ${term("relu", "ReLU")}. ` +
+    `Hover or tap a hidden circle to see its 7 weights as numbers. ` +
     `<b>Outputs</b> are the five probabilities, made by ${term("softmax", "softmax")}; the winner is green. ` +
     `Move the sliders, or press Train with this open, and the picture updates. Tap an underlined word for its definition.`;
 }
@@ -440,7 +450,18 @@ $("netNote").addEventListener("click", e => {
   $("netDef").hidden = !openTerm;
   $("netNote").querySelectorAll(".term").forEach(b => b.setAttribute("aria-expanded", b.dataset.term === openTerm));
 });
-$("netBtn").addEventListener("click", () => { drawNetwork(); $("netDialog").showModal(); });
+let hoverHid = null, pinnedHid = null;
+const hidOf = e => { const c = e.target.closest && e.target.closest(".hid"); return c ? +c.dataset.h : null; };
+$("netSvgWrap").addEventListener("mouseover", e => { const j = hidOf(e); if (j !== null && j !== hoverHid) { hoverHid = j; drawNetwork(); } });
+$("netSvgWrap").addEventListener("mouseout", e => { if (hidOf(e) !== null && pinnedHid === null) { hoverHid = null; drawNetwork(); } });
+$("netSvgWrap").addEventListener("click", e => {
+  const j = hidOf(e);
+  if (j === null) { if (pinnedHid !== null) { pinnedHid = hoverHid = null; drawNetwork(); } return; }
+  pinnedHid = pinnedHid === j ? null : j;
+  if (pinnedHid === null) hoverHid = null;
+  drawNetwork();
+});
+$("netBtn").addEventListener("click", () => { pinnedHid = hoverHid = null; drawNetwork(); $("netDialog").showModal(); });
 $("netClose").addEventListener("click", () => $("netDialog").close());
 
 // QR code toggle so students can find this page during a presentation
