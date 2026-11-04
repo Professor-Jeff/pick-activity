@@ -37,6 +37,12 @@
   button { font: inherit; padding: 10px 18px; border-radius: 8px; border: 1px solid var(--line); background: var(--card); cursor: pointer; margin-right: 8px; }
   button.primary { background: var(--accent); color: #fff; border-color: var(--accent); }
   button:disabled { opacity: .5; cursor: default; }
+  button.training, button.trained { opacity: 1; cursor: default; color: #fff; }
+  button.training { background: var(--accent); border-color: var(--accent); }
+  button.trained { background: var(--ok); border-color: var(--ok); }
+  .spin { display: inline-block; width: 12px; height: 12px; border: 2px solid rgba(255,255,255,.4); border-top-color: #fff; border-radius: 50%; animation: spin .8s linear infinite; vertical-align: -2px; margin-right: 8px; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  body.busy, body.busy * { cursor: progress !important; }
   progress { width: 100%; height: 10px; margin-top: 12px; }
   details { margin-top: 16px; }
   summary { cursor: pointer; color: var(--muted); }
@@ -345,13 +351,27 @@ function reset() {
   $("epoch").textContent = "0"; $("loss").textContent = "—"; $("acc").textContent = "—";
   $("prog").value = 0;
   const s = $("status"); s.className = "status untrained"; s.textContent = "Untrained — weights are random";
-  $("trainBtn").disabled = $("nTrainBtn").disabled = false;
+  setTrainButtons("idle");
   predict(); showWeights();
+}
+
+// both Train buttons show the same state: idle, training (spinner + wait cursor), or trained (green check)
+const TRAIN_LABELS = { trainBtn: "Train (3000 epochs)", nTrainBtn: "Train" };
+function setTrainButtons(state, pct) {
+  for (const id of ["trainBtn", "nTrainBtn"]) {
+    const b = $(id);
+    b.className = "primary" + (state === "idle" ? "" : " " + state);
+    b.disabled = state !== "idle";
+    b.innerHTML = state === "training" ? `<span class="spin"></span>Training… ${pct}%`
+                : state === "trained" ? "✓ Trained"
+                : TRAIN_LABELS[id];
+  }
+  document.body.classList.toggle("busy", state === "training");
 }
 
 function train() {
   if (training) return;
-  training = true; $("trainBtn").disabled = $("nTrainBtn").disabled = true;
+  training = true; setTrainButtons("training", 0);
   const s = $("status"); s.className = "status"; s.textContent = "Training…";
   let epoch = 0;
 
@@ -362,6 +382,7 @@ function train() {
     $("loss").textContent = stats.loss.toFixed(4);
     $("acc").textContent = (stats.acc * 100).toFixed(1) + "%";
     $("prog").value = epoch;
+    setTrainButtons("training", Math.round(100 * epoch / EPOCHS));
     predict(); showWeights();            // sliders update live while it learns
 
     if (epoch < EPOCHS) requestAnimationFrame(step);
@@ -373,6 +394,8 @@ function train() {
       s.className = "status done";
       s.textContent = `Trained — ${(ok / 5).toFixed(1)}% correct on 500 unseen examples`;
       training = false; trained = true;
+      setTrainButtons("trained");
+      if ($("netDialog").open) drawNetwork();   // title flips to "trained"
     }
   }
   requestAnimationFrame(step);
