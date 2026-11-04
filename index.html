@@ -125,16 +125,16 @@
 
   <div class="grid">
     <div class="card">
-      <h2>Inputs</h2>
+      <h2>Network says</h2>
+      <div id="bars"></div>
+      <div class="rules">The if/else rules say: <b id="ruleAnswer"></b></div>
+
+      <h2 style="margin-top:18px">Inputs</h2>
       <label>Temperature <span id="tempVal">72 °F</span></label>
       <input type="range" id="temp" min="0" max="100" value="72">
       <label>Chance of rain <span id="rainVal">20 %</span></label>
       <input type="range" id="rain" min="0" max="100" value="20">
-
-      <h2>Network says</h2>
-      <div id="bars"></div>
-      <div class="rules">The if/else rules say: <b id="ruleAnswer"></b></div>
-      <div style="margin-top:12px"><button id="netBtn" title="Open a live picture of the network: the slider values going in, the five probabilities coming out, and all 56 weights in between. It updates as you move the sliders and as it trains.">Show the network</button></div>
+      <div style="margin-top:4px"><button id="netBtn" title="Open a live picture of the network: the slider values going in, the five probabilities coming out, and all 56 weights in between. It updates as you move the sliders and as it trains.">Show the network</button></div>
 
       <h2 style="margin-top:18px">The rules (what the network has to discover)</h2>
       <table class="rulesTbl">
