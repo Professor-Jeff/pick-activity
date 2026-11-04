@@ -74,8 +74,8 @@
   #netDialog .netCtl input[type=range] { margin: 0; }
   #netDialog .netCtl button { margin: 0; padding: 8px 14px; white-space: nowrap; }
   #netDialog .netBtns { display: flex; align-items: center; gap: 6px; }
-  #netDialog .netCtl button.x { padding: 0; width: 26px; height: 26px; border-radius: 50%; font-size: 1.1rem; line-height: 1; color: var(--muted); }
-  #netDialog .netCtl button.x:hover:not(:disabled) { color: var(--ink); border-color: var(--muted); }
+  #netDialog .netCtl button.x { padding: 0; width: 30px; height: 30px; border-radius: 50%; font-size: .95rem; line-height: 1; display: inline-flex; align-items: center; justify-content: center; }
+  #netDialog .netCtl button.x:hover:not(:disabled) { border-color: var(--muted); background: var(--bg); }
   @media (max-width: 560px) { #netDialog .netCtl { grid-template-columns: 1fr 1fr; } #netDialog .netBtns { grid-column: 1 / -1; margin-top: 8px; } }
   #netDialog .term { font: inherit; font-weight: 600; color: var(--accent); background: none; border: 0; padding: 0; margin: 0; cursor: pointer; text-decoration: underline dotted; text-underline-offset: 3px; }
   #netDialog .term[aria-expanded="true"] { background: #dbeafe; border-radius: 4px; text-decoration: none; }
@@ -175,7 +175,7 @@
     <h3 id="netTitle">Inside the network, right now</h3>
     <div><label>Temperature <span id="nTempVal">72 °F</span></label><input type="range" id="nTemp" min="0" max="100" value="72"></div>
     <div><label>Chance of rain <span id="nRainVal">20 %</span></label><input type="range" id="nRain" min="0" max="100" value="20"></div>
-    <div class="netBtns"><button class="primary" id="nTrainBtn" title="One epoch = one pass through all 2,000 examples in the table below. On each pass the network compares its guesses with the if/else answers, adds up how wrong it was (the Loss), and nudges all 56 weights a little in the direction that makes the loss smaller. That nudge is gradient descent. 3,000 passes is enough for the rules to emerge. Watch Loss fall and Accuracy rise.">Train</button><button class="x" id="nResetBtn" title="Throws away everything the network learned. All 56 weights are set to small random numbers (bell-curve draws centered on zero) and the biases to zero, so it goes back to guessing. They are random rather than all zero so the 8 hidden neurons start out different from each other and can learn different things; identical neurons would stay identical. A fresh set of 2,000 examples is drawn too." aria-label="Reset weights">×</button></div>
+    <div class="netBtns"><button class="primary" id="nTrainBtn" title="One epoch = one pass through all 2,000 examples in the table below. On each pass the network compares its guesses with the if/else answers, adds up how wrong it was (the Loss), and nudges all 56 weights a little in the direction that makes the loss smaller. That nudge is gradient descent. 3,000 passes is enough for the rules to emerge. Watch Loss fall and Accuracy rise.">Train</button><button class="x" id="nResetBtn" title="Throws away everything the network learned. All 56 weights are set to small random numbers (bell-curve draws centered on zero) and the biases to zero, so it goes back to guessing. They are random rather than all zero so the 8 hidden neurons start out different from each other and can learn different things; identical neurons would stay identical. A fresh set of 2,000 examples is drawn too." aria-label="Reset weights">🔄</button></div>
   </div>
   <div id="netSvgWrap"></div>
   <p class="netNote" id="netNote"></p>
